@@ -165,12 +165,11 @@ System.register("lib/Cell.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "npm:
                 }
 
                 _createClass(Cell, [{
-                    key: "active",
-                    value: function active() {
-                        return this.props.activeCells.indexOf(this.props.id) >= 0;
-                    }
-                }, {
                     key: "guessState",
+
+                    /*active() {
+                        return this.props.activeCells.indexOf(this.props.id) >= 0;
+                    }*/
                     value: function guessState() {
                         if (this.props.correctGuesses.indexOf(this.props.id) >= 0) {
                             return true;
@@ -184,7 +183,7 @@ System.register("lib/Cell.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "npm:
                         if (this.guessState() === undefined && this.props.gameState === "recall") {
                             this.props.recordGuess({
                                 cellId: this.props.id,
-                                userGuessIsCorrect: this.active()
+                                userGuessIsCorrect: this.props.isActive
                             });
                         }
                     }
@@ -192,9 +191,9 @@ System.register("lib/Cell.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "npm:
                     key: "render",
                     value: function render() {
                         var className = "cell";
-                        if (this.props.showActiveCells && this.active()) {
-                            className += " active";
-                        }
+                        if (this.props.showActiveCells && this.props.isActive /*this.active()*/) {
+                                className += " active";
+                            }
                         className += " guess-" + this.guessState();
                         return React.createElement("div", { className: className, onClick: this.handleClick.bind(this) });
                     }
@@ -731,7 +730,12 @@ System.register("lib/Footer.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "np
                                 "..."
                             ),
                             this.remainingCount(),
-                            this.playAgainButton()
+                            this.playAgainButton(),
+                            React.createElement(
+                                "h3",
+                                null,
+                                this.props.secondsRemaining
+                            )
                         );
                     }
                 }]);
@@ -6506,7 +6510,8 @@ System.register("lib/Game.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "npm:
                     this.state = {
                         gameState: "ready",
                         wrongGuesses: [],
-                        correctGuesses: []
+                        correctGuesses: [],
+                        secondsRemaining: this.props.timeoutSeconds
                     };
                 }
 
@@ -6517,17 +6522,18 @@ System.register("lib/Game.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "npm:
 
                         this.setState({ gameState: 'recall' }, function () {
                             _this.secondsRemaining = _this.props.timeoutSeconds;
-                            setInterval(function () {
+                            _this.secondsRemainingTimerId = setInterval(function () {
                                 if (--_this.secondsRemaining === 0) {
                                     _this.setState({ gameState: _this.finishGame('lost') });
                                 }
+                                _this.setState({ secondsRemaining: _this.secondsRemaining });
                             }, 1000);
                         });
                     }
                 }, {
                     key: "finishGame",
                     value: function finishGame(gameState) {
-                        clearInterval(this.playTimerId);
+                        clearInterval(this.secondsRemainingTimerId);
                         return gameState;
                     }
                 }, {
@@ -6537,7 +6543,7 @@ System.register("lib/Game.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "npm:
 
                         this.memorizeTimerId = setTimeout(function () {
                             _this2.setState({ gameState: 'memorize' }, function () {
-                                _this2.recallTimerId = setTimeout(_this2.startRecallMode.bind(_this2), 2000);
+                                _this2.recallTimerId = setTimeout(_this2.startRecallMode.bind(_this2), 500);
                             });
                         }, 2000);
                     }
@@ -6572,6 +6578,11 @@ System.register("lib/Game.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "npm:
                         this.setState({ correctGuesses: correctGuesses, wrongGuesses: wrongGuesses, gameState: gameState });
                     }
                 }, {
+                    key: "cellActive",
+                    value: function cellActive(cell) {
+                        return this.activeCells.indexOf(cell) >= 0;
+                    }
+                }, {
                     key: "render",
                     value: function render() {
                         var _this3 = this;
@@ -6586,14 +6597,14 @@ System.register("lib/Game.js", ["npm:babel-runtime@5.8.38/helpers/get.js", "npm:
                                     { key: ri },
                                     row.map(function (cellId) {
                                         return React.createElement(Cell, _extends({ key: cellId, id: cellId, showActiveCells: showActiveCells,
-                                            activeCells: _this3.activeCells, recordGuess: _this3.recordGuess.bind(_this3)
+                                            isActive: _this3.cellActive(cellId), recordGuess: _this3.recordGuess.bind(_this3)
                                         }, _this3.state));
                                     })
                                 );
                             }),
                             React.createElement(Footer, _extends({ activeCellsCount: this.props.activeCellsCount,
                                 playAgain: this.props.createNewGame
-                            }, this.state))
+                            }, this.state, { secondsRemaining: this.secondsRemaining }))
                         );
                     }
                 }]);
@@ -6651,7 +6662,7 @@ System.register("lib/Container.js", ["npm:babel-runtime@5.8.38/helpers/get.js", 
                             null,
                             React.createElement(Game, { key: this.state.gameId,
                                 createNewGame: this.createNewGame.bind(this),
-                                rows: 5, columns: 5,
+                                rows: 6, columns: 6,
                                 activeCellsCount: 6 })
                         );
                     }
